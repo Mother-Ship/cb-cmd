@@ -7,7 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.jackson.Jacksonized;
 import org.springframework.util.CollectionUtils;
+import top.mothership.cb.cmd.enums.MediaEntityType;
 
+import java.util.Collections;
 import java.util.List;
 @Data
 @Builder
@@ -17,6 +19,16 @@ public class CbCmdResponse {
     private String text;
     @ApiModelProperty("媒体信息")
     private List<MediaEntity> media;
+
+    public static CbCmdResponse singleMedia(byte[] data, MediaEntityType type){
+        return CbCmdResponse.builder()
+                .media(Collections.singletonList(
+                        MediaEntity.builder()
+                                .data(data)
+                                .type(type.name())
+                                .build()
+                )).build();
+    }
 
     public static CbCmdResponse empty(){
         return CbCmdResponse.builder().build();
