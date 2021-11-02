@@ -10,7 +10,7 @@ import javax.validation.constraints.NotNull;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-@SuperBuilder
+
 public class StatCommand extends BaseCommand {
     @CbCmdArgument("#")
     private Integer day;

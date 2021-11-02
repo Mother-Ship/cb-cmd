@@ -13,7 +13,7 @@ public @interface CbCmdArgument {
      * @see top.mothership.cb.cmd.biz.constant.CbCmdPrefix
      * @return 该参数的前缀字符
      */
-    String value() default"";
+    String value() default "";
 
 
 }

@@ -14,5 +14,5 @@ import top.mothership.cb.cmd.biz.processor.annotation.CbCmdArgument;
 
 public class PrCommand extends BaseCommand {
     @CbCmdArgument(CbCmdPrefix.COLON)
-    private Integer mode;
+    private String mode;
 }

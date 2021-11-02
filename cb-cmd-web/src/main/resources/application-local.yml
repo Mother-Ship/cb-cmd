@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    username: "root"
+    password: "root"
+    driver-class-name: "com.mysql.cj.jdbc.Driver"
+    url: "jdbc:mysql://localhost:3306/cabbage_local?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=UTC"
+
+debug: true

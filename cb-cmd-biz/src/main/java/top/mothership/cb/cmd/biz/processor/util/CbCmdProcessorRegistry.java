@@ -20,10 +20,7 @@ import top.mothership.cb.cmd.model.response.CbCmdResponse;
 import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Component
 @Slf4j
@@ -120,7 +117,8 @@ public class CbCmdProcessorRegistry {
 
         Object param = parameterType.getDeclaredConstructor().newInstance();
 
-        Map<String, String> prefixTextMap = new HashMap<>();
+
+        List<String> prefixList = new ArrayList<>(parameterType.getDeclaredFields().length);
 
         for (Field declaredField : parameterType.getDeclaredFields()) {
             CbCmdArgument argumentAnnotation = declaredField.getAnnotation(CbCmdArgument.class);
@@ -132,14 +130,42 @@ public class CbCmdProcessorRegistry {
                 log.warn("命令解析错误：命令{}中参数前缀{}重复", text, prefix);
                 throw new RuntimeException("命令解析错误：参数前缀重复");
             }
-            //TODO 切割
+            prefixList.add(prefix);
         }
+
+        Map<String, String> prefixTextMap = split(text, prefixList);
 
         return param;
 
     }
 
-    private List<String> split(String s, String[] separator){
-        return null;
+    private Map<String, String> split(String s, List<String> separator){
+        Map<String,String> result = new HashMap<>(separator.size());
+        for (String sep : separator) {
+            int i = 0;
+            int start;
+            int end = 0;
+            while (i < s.length()) {
+                if (sep.indexOf(s.charAt(i)) >= 0){
+                    start = i + 1;
+                    for (String otherSep : separator) {
+                        if (otherSep.equals(sep)){
+                            continue;
+                        }
+                        int j = 0;
+                        while (j < s.length()) {
+                            if (otherSep.indexOf(s.charAt(j)) >= 0 && j > i){
+                                end = j;
+                                break;
+                            }
+                            j++;
+                        }
+                    }
+                    result.put(sep, s.substring(start, end));
+                }
+                i++;
+            }
+        }
+        return result;
     }
 }

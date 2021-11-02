@@ -5,6 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import top.mothership.cb.cmd.biz.command.BaseCommand;
+import top.mothership.cb.cmd.biz.processor.util.ProcessorFunction;
+
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Data
 @Builder

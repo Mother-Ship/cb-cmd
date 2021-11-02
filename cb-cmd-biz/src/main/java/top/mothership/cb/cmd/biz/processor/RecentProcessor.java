@@ -9,7 +9,7 @@ import top.mothership.cb.cmd.model.response.CbCmdResponse;
 public class RecentProcessor {
 
     @CbCmdProcessor("pr")
-    public CbCmdResponse pr(PrCommand command){
+    public static CbCmdResponse pr(PrCommand command){
 
 
         return CbCmdResponse.singleMedia(new byte[2], MediaEntityType.IMAGE);
