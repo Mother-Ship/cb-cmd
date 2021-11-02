@@ -31,7 +31,6 @@ public class CbCmdProcessorManager implements BeanPostProcessor {
     private final Map<String,Method> commandMapping = new HashMap<>();
 
     @Override
-
     public Object postProcessAfterInitialization(Object bean,  @Nullable String beanName) throws BeansException {
         Method[] methods = ReflectionUtils.getAllDeclaredMethods(bean.getClass());
         for (Method method : methods) {

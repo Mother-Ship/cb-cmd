@@ -2,22 +2,31 @@ package top.mothership.cb.cmd.biz.processor.util;
 
 
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.stereotype.Component;
 import top.mothership.cb.cmd.biz.command.BaseCommand;
+import top.mothership.cb.cmd.biz.command.general.query.PrCommand;
+import top.mothership.cb.cmd.biz.processor.annotation.CbCmdArgument;
 import top.mothership.cb.cmd.biz.processor.annotation.CbCmdProcessor;
 import top.mothership.cb.cmd.biz.processor.util.model.CbCmdProcessorInfo;
 import top.mothership.cb.cmd.model.RawCommand;
 import top.mothership.cb.cmd.model.response.CbCmdResponse;
 
 import javax.annotation.PostConstruct;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Component
+@Slf4j
 public class CbCmdProcessorRegistry {
     @Autowired
     private ApplicationContext applicationContext;
@@ -36,12 +45,13 @@ public class CbCmdProcessorRegistry {
 
     public CbCmdProcessorInfo getProcessorInfo(RawCommand raw) {
 
-        BaseCommand baseCommand = toBaseCommand(raw);
+        String commandName = getCommandName(raw);
 
-        Method method = cbCmdProcessorManager.getByCommandName(baseCommand.getCommandName());
+        Method method = cbCmdProcessorManager.getByCommandName(commandName);
 
         CbCmdProcessor processorInfo = AnnotationUtils.findAnnotation(method, CbCmdProcessor.class);
 
+        //如果命令标明了要自己处理参数，而不是依赖注解，则默认入参为String类型
         if (processorInfo != null && processorInfo.rawParameter()) {
             return CbCmdProcessorInfo.builder()
                     .className(method.getDeclaringClass().getName())
@@ -51,9 +61,11 @@ public class CbCmdProcessorRegistry {
                     .build();
         }
 
+        //否则从命令文本中解析出参数对象
         Class<?> parameterClz = method.getParameterTypes()[0];
 
-        Object parameter = getParameterByText(parameterClz, raw.getText());
+        Object parameter = getParameterByText(parameterClz,
+                raw.getText().replace(commandName, ""));
 
         return CbCmdProcessorInfo.builder()
                 .className(method.getDeclaringClass().getName())
@@ -79,7 +91,7 @@ public class CbCmdProcessorRegistry {
      * @param raw
      * @return
      */
-    private BaseCommand toBaseCommand(RawCommand raw) {
+    private String getCommandName(RawCommand raw) {
         String text = raw.getText();
 
         int start = StringUtils.indexOfAny(text, new char[]{'!', '！'});
@@ -91,19 +103,43 @@ public class CbCmdProcessorRegistry {
             commandName = text.substring(start, end);
         }
 
-        return BaseCommand.builder().commandName(commandName).build();
+        return commandName;
     }
 
     /**
      * 拆解命令参数
-     * 1. 如果是
+     * 1. 检查所有参数前缀在命令中出现的次数，多余一次直接报错，强制要求命令自己处理参数
+     * 2. 切割出每个参数前缀<->空格之间的字符串，设置到对应注解的字段中
      *
      * @param parameterType
      * @param text
      * @return
      */
+    @SneakyThrows
     private Object getParameterByText(Class<?> parameterType, String text) {
-        return null;
 
+        Object param = parameterType.getDeclaredConstructor().newInstance();
+
+        Map<String, String> prefixTextMap = new HashMap<>();
+
+        for (Field declaredField : parameterType.getDeclaredFields()) {
+            CbCmdArgument argumentAnnotation = declaredField.getAnnotation(CbCmdArgument.class);
+            String prefix = argumentAnnotation.value();
+
+            String[] split = StringUtils.split(text, prefix, 2);
+
+            if (split[1].contains(prefix)){
+                log.warn("命令解析错误：命令{}中参数前缀{}重复", text, prefix);
+                throw new RuntimeException("命令解析错误：参数前缀重复");
+            }
+            //TODO 切割
+        }
+
+        return param;
+
+    }
+
+    private List<String> split(String s, String[] separator){
+        return null;
     }
 }

@@ -8,9 +8,12 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface CbCmdArgument {
-    @AliasFor("prefix")
+    /**
+     * 该参数的前缀字符，只能从CbCmdPrefix中取
+     * @see top.mothership.cb.cmd.biz.constant.CbCmdPrefix
+     * @return 该参数的前缀字符
+     */
     String value() default"";
 
-    @AliasFor("value")
-    String prefix() default "";
+
 }
