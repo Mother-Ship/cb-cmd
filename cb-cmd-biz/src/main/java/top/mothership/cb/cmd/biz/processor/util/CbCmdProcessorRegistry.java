@@ -7,10 +7,8 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.stereotype.Component;
-import top.mothership.cb.cmd.biz.command.BaseCommand;
-import top.mothership.cb.cmd.biz.command.general.query.PrCommand;
+import top.mothership.cb.cmd.biz.constant.CbCmdPrefix;
 import top.mothership.cb.cmd.biz.processor.annotation.CbCmdArgument;
 import top.mothership.cb.cmd.biz.processor.annotation.CbCmdProcessor;
 import top.mothership.cb.cmd.biz.processor.util.model.CbCmdProcessorInfo;
@@ -21,6 +19,7 @@ import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -118,54 +117,82 @@ public class CbCmdProcessorRegistry {
         Object param = parameterType.getDeclaredConstructor().newInstance();
 
 
-        List<String> prefixList = new ArrayList<>(parameterType.getDeclaredFields().length);
+        List<CbCmdArgument> annotations = Arrays.stream(parameterType.getDeclaredFields())
+                .map(field -> field.getAnnotation(CbCmdArgument.class)).toList();
+
+        List<Character> prefixList = annotations.stream()
+                .map(a -> getValidPrefix(a.value(), text))
+                .toList();
+
+        Map<Character, String> prefixTextMap = split(text, prefixList);
 
         for (Field declaredField : parameterType.getDeclaredFields()) {
             CbCmdArgument argumentAnnotation = declaredField.getAnnotation(CbCmdArgument.class);
-            String prefix = argumentAnnotation.value();
-
-            String[] split = StringUtils.split(text, prefix, 2);
-
-            if (split[1].contains(prefix)){
-                log.warn("命令解析错误：命令{}中参数前缀{}重复", text, prefix);
-                throw new RuntimeException("命令解析错误：参数前缀重复");
+            Character prefix = argumentAnnotation.value();
+            String value = prefixTextMap.get(prefix);
+            if (value != null) {
+                declaredField.setAccessible(true);
+                declaredField.set(param, value);
             }
-            prefixList.add(prefix);
         }
-
-        Map<String, String> prefixTextMap = split(text, prefixList);
 
         return param;
 
     }
 
-    private Map<String, String> split(String s, List<String> separator){
-        Map<String,String> result = new HashMap<>(separator.size());
-        for (String sep : separator) {
+    private Character getValidPrefix(Character prefix, String text) {
+        if (CbCmdPrefix.isNothing(prefix)) {
+            return prefix;
+        }
+
+        String[] split = StringUtils.split(text, String.valueOf(prefix), 2);
+
+        if (split[1].indexOf(prefix) != -1) {
+            log.warn("命令解析错误：命令{}中参数前缀{}重复", text, prefix);
+            throw new RuntimeException("命令解析错误：参数前缀重复");
+        }
+        return prefix;
+    }
+
+    private Map<Character, String> split(String s, List<Character> separatorList) {
+        Map<Character, String> result = new HashMap<>(separatorList.size());
+        for (Character currentSeparator : separatorList) {
+
+            //如果是空前缀，则找到文本中下一个非空前缀，取之间的内容
+            if (CbCmdPrefix.isNothing(currentSeparator)) {
+                int end = findNextSeparator(s, separatorList, currentSeparator);
+                result.put(currentSeparator, s.substring(s.indexOf(" ") + 1, end - 1));
+                continue;
+            }
+
+
             int i = 0;
-            int start;
-            int end = 0;
             while (i < s.length()) {
-                if (sep.indexOf(s.charAt(i)) >= 0){
-                    start = i + 1;
-                    for (String otherSep : separator) {
-                        if (otherSep.equals(sep)){
-                            continue;
-                        }
-                        int j = 0;
-                        while (j < s.length()) {
-                            if (otherSep.indexOf(s.charAt(j)) >= 0 && j > i){
-                                end = j;
-                                break;
-                            }
-                            j++;
-                        }
-                    }
-                    result.put(sep, s.substring(start, end));
+                if (currentSeparator.equals(s.charAt(i))) {
+                    int start = i + 1;
+                    int end = findNextSeparator(s, separatorList, currentSeparator);
+                    result.put(currentSeparator, s.substring(start, end - 1));
                 }
                 i++;
             }
         }
         return result;
     }
+
+    //TODO 目前有下标越界错误，排查为什么j > index没有生效
+    private int findNextSeparator(String s, List<Character> separator, Character currentSeparator) {
+        int index  = s.indexOf(currentSeparator);
+
+        int j = 0;
+        while (j < s.length()) {
+            if (separator.contains(s.charAt(j)) && j > index) {
+                return j;
+            }
+            j++;
+        }
+
+        //没有找到下一个分隔符，则返回最后一个字符的位置
+        return ++j;
+    }
+
 }
