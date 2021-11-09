@@ -22,24 +22,24 @@ class CbCmdProcessorRegistryTest extends SpringBootJunitTestCase {
 
     @SneakyThrows
     @Test
-    public void testGetProcessorInfo() {
-        CbCmdProcessorInfo processorInfo =
-                cbCmdProcessorRegistry.getProcessorInfo(RawCommand.builder().text("!stat Mother Ship :3 #2").build());
+    public void testProcessStatCommand() {
+        CbCmdProcessorInfo actual =
+                cbCmdProcessorRegistry.getProcessorInfo(RawCommand.builder().text("!stat  Mother Ship  : 3  # 2").build());
 
         StatCommand command = new StatCommand();
         command.setOsuId("Mother Ship");
         command.setMode("3");
         command.setDay("2");
+        CbCmdProcessorInfo expected = CbCmdProcessorInfo.builder()
+                .className(StatProcessor.class.getName())
+                .methodName(FunctionUtil.toName(StatProcessor::stat))
+                .parameter(command)
+                .parameterType(command.getClass())
+                .build();
 
         Assertions.assertEquals(
-                objectMapper.writeValueAsString(CbCmdProcessorInfo.builder()
-                        .className(StatProcessor.class.getName())
-                        .methodName(FunctionUtil.toName(StatProcessor::stat))
-                        .parameter(command)
-                        .parameterType(command.getClass())
-                        .build()),
-                objectMapper.writeValueAsString(processorInfo)
-
+                objectMapper.writeValueAsString(expected),
+                objectMapper.writeValueAsString(actual)
         );
     }
 

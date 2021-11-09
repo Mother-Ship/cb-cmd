@@ -158,20 +158,20 @@ public class CbCmdProcessorRegistry {
         Map<Character, String> result = new HashMap<>(separatorList.size());
         for (Character currentSeparator : separatorList) {
 
-            //如果是空前缀，则找到文本中下一个非空前缀，取之间的内容
+            //如果是空前缀的参数，则取文本开头 到第一个非空前缀之间的内容，再去除头尾空格
             if (CbCmdPrefix.isNothing(currentSeparator)) {
                 int end = findNextSeparator(s, separatorList, currentSeparator);
-                result.put(currentSeparator, s.substring(s.indexOf(" ") + 1, end - 1));
+                result.put(currentSeparator, s.substring(0, end).trim());
                 continue;
             }
 
-
+            //如果是普通前缀的参数，则遍历字符串，找到当前前缀 和字符串顺序内下一个前缀之间的内容，再去除头尾空格
             int i = 0;
             while (i < s.length()) {
                 if (currentSeparator.equals(s.charAt(i))) {
                     int start = i + 1;
                     int end = findNextSeparator(s, separatorList, currentSeparator);
-                    result.put(currentSeparator, s.substring(start, end - 1));
+                    result.put(currentSeparator, s.substring(start, end).trim());
                 }
                 i++;
             }
@@ -179,20 +179,21 @@ public class CbCmdProcessorRegistry {
         return result;
     }
 
-    //TODO 目前有下标越界错误，排查为什么j > index没有生效
     private int findNextSeparator(String s, List<Character> separator, Character currentSeparator) {
         int index  = s.indexOf(currentSeparator);
 
         int j = 0;
         while (j < s.length()) {
-            if (separator.contains(s.charAt(j)) && j > index) {
+            if (separator.contains(s.charAt(j))
+                    && !CbCmdPrefix.isNothing(s.charAt(j))
+                    && j > index) {
                 return j;
             }
             j++;
         }
 
         //没有找到下一个分隔符，则返回最后一个字符的位置
-        return ++j;
+        return j;
     }
 
 }
